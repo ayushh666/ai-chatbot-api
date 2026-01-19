@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pickle
 import random
@@ -6,6 +7,15 @@ import os
 
 # App
 app = FastAPI()
+
+# Enable CORS for Blogger
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Load model safely
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,8 +38,7 @@ def chat(req: ChatRequest):
 
     for intent in intents["intents"]:
         if intent["tag"] == tag:
-            return {
-                "response": random.choice(intent["responses"])
-            }
+            return {"response": random.choice(intent["responses"])}
 
     return {"response": "Sorry, I didn't understand that."}
+
