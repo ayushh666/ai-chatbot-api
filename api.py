@@ -1,44 +1,47 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import pickle
-import random
 import os
+from openai import OpenAI
 
-# App
 app = FastAPI()
 
-# Enable CORS for Blogger
+# CORS for Blogger
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Load model safely
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(BASE_DIR, "model.pkl")
-
-with open(model_path, "rb") as f:
-    model, vectorizer, intents = pickle.load(f)
 
 # Request body
 class ChatRequest(BaseModel):
     message: str
 
-# Chat endpoint
+# OpenAI client (CORRECT WAY)
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY")
+)
+
 @app.post("/chat")
 def chat(req: ChatRequest):
-    text = req.message
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful AI chatbot. Answer any question clearly."},
+            {"role": "user", "content": req.message}
+        ]
+    )
 
-    X = vectorizer.transform([text])
-    tag = model.predict(X)[0]
+    return {
+        "response": completion.choices[0].message.content
+    }
 
-    for intent in intents["intents"]:
-        if intent["tag"] == tag:
-            return {"response": random.choice(intent["responses"])}
+@app.get("/")
+def home():
+    return {"status": "AI chatbot API running"}
+
 
     return {"response": "Sorry, I didn't understand that."}
+
 
